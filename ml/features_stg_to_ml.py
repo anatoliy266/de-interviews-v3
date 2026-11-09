@@ -93,19 +93,14 @@ def save_features(df, engine, start_date, end_date):
 def run_price_features_etl(db_url, start_date, end_date):
     engine = None
     try:
-        # 1. Валидация. 
         start_date, end_date = validate_date_range(start_date, end_date)
 
-        # 2. Подключение через общую утилиту
         engine = create_db_engine(db_url)
 
-        # 3. Извлечение
         prices = read_source_data(engine, start_date, end_date)
 
-        # 4. Трансформация
         features = build_calendar_features(prices)
-
-        # 5. Загрузка
+        
         save_features(features, engine, start_date, end_date)
 
         logger.info("ML Feature ETL успешно завершён: %s — %s", start_date, end_date)

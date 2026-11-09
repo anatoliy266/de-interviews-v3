@@ -194,7 +194,6 @@ def _read_future_features_from_raw(engine: Engine, as_of_date) -> pd.DataFrame:
         logger.info("В public.prices нет заявок с loading_date > %s", as_of_date)
         return pd.DataFrame()
 
-    # Те же преобразования, что и в etl/prices_raw_to_stg.py.
     cities_ids, rates = read_reference_data(engine)
     raw = transform_currency(raw, rates)
     raw = apply_dq_rules(raw, cities_ids)
@@ -212,7 +211,6 @@ def _read_future_features_from_raw(engine: Engine, as_of_date) -> pd.DataFrame:
     if raw.empty:
         return pd.DataFrame()
 
-    # Маппинг body_type -> body_group, идентичный stg.v_price_features_source.
     body_query = text("""
         WITH raw_price_bodies AS (
             SELECT
@@ -323,7 +321,6 @@ def _read_future_features(engine: Engine, as_of_date) -> pd.DataFrame:
         return pd.DataFrame()
 
     future = pd.concat(parts, ignore_index=True)
-    # Одна строка на price_id + body_group, как в ml.price_features.
     future = future.drop_duplicates(subset=["price_id", "body_group"], keep="first")
     return future
 
@@ -389,8 +386,6 @@ def run_batch_prediction(
         df = df.drop_duplicates(subset=["price_id", "body_group"], keep="first")
         df["loading_date"] = pd.to_datetime(df["loading_date"], errors="raise")
 
-        # Ключевое отличие от ml/predict.py: маска будущих заявок теперь
-        # реально достижима, потому что данные за loading_date > as_of есть.
         is_future = df["loading_date"] > pd.Timestamp(as_of_dt)
         future_mask = is_future.to_numpy(dtype=bool)
 
@@ -408,8 +403,6 @@ def run_batch_prediction(
             dtype="float64"
         )
 
-        # Для будущих заявок фактические значения не используются даже если
-        # price заполнен в исходной строке.
         actual_for_save = np.where(future_mask, np.nan, actual)
 
         valid_actual = ~future_mask & ~np.isnan(actual)
@@ -455,8 +448,6 @@ def run_batch_prediction(
         logger.info("Сохранение результатов в таблицу %s...", target_table)
 
         with engine.begin() as conn:
-            # Чистим весь диапазон скоринга, включая будущие заявки.
-            # Это гарантирует идемпотентность и отсутствие дублей.
             deleted = conn.execute(
                 text("""
                     DELETE FROM {target_table}

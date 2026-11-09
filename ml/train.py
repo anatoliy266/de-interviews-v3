@@ -85,9 +85,9 @@ def split_dataset(
     data["loading_date"] = pd.to_datetime(data["loading_date"], errors="raise")
 
     ts_train_start = pd.Timestamp(train_start)
-    ts_train_end = pd.Timestamp(train_end)     # Не включительно
-    ts_test_start = pd.Timestamp(test_start)   # Включительно
-    ts_test_end = pd.Timestamp(test_end)       # Включительно
+    ts_train_end = pd.Timestamp(train_end)     
+    ts_test_start = pd.Timestamp(test_start)   
+    ts_test_end = pd.Timestamp(test_end)      
 
     train_mask = (data["loading_date"] >= ts_train_start) & (data["loading_date"] < ts_train_end)
     test_mask = (data["loading_date"] >= ts_test_start) & (data["loading_date"] <= ts_test_end)
@@ -224,7 +224,6 @@ if __name__ == "__main__":
 
 
 
-    # Парсим переданные аргументы
     args = parser.parse_args()
 
     logger.info("Инициализация запуска пайплайна с аргументами командной строки...")
@@ -233,7 +232,6 @@ if __name__ == "__main__":
     train_start_dt = as_of_dt - dateutil.relativedelta.relativedelta(months=3)
     split_dt = as_of_dt - timedelta(weeks=3)
     
-    # Форматируем обратно в строки для SQL и pandas
     train_start = train_start_dt.strftime("%Y-%m-%d")
     train_end = split_dt.strftime("%Y-%m-%d")   
     test_end = args.as_of_date                  

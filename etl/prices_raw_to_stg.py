@@ -100,8 +100,6 @@ def apply_dq_rules(df: pd.DataFrame, cities_ids: Set) -> pd.DataFrame:
         invalid_cities = ~df["loading_city_gcid"].isin(cities_ids) | ~df["unloading_city_gcid"].isin(cities_ids)
         missing_rate_values = ~df["currency_code"].eq("643") & df["value"].isnull()
 
-        # Примечание: при совпадении нескольких условий причина перезаписывается последним сработавшим правилом.
-        # Это поведение сохранено из оригинального кода.
         df.loc[invalid_prices, "dq_reject_reason"] = "INVALID_PRICE"
         df.loc[invalid_distance, "dq_reject_reason"] = "INVALID_DISTANCE"
         df.loc[invalid_weight, "dq_reject_reason"] = "INVALID_WEIGHT"
@@ -124,7 +122,6 @@ def enrich_categories(df: pd.DataFrame) -> pd.DataFrame:
     try:
         df = df.copy()
         
-        # Категории веса
         missing_weight = df['weight_category'].isnull()
         rounded_weight = np.round(df['total_weight'], 1)
 
@@ -135,7 +132,6 @@ def enrich_categories(df: pd.DataFrame) -> pd.DataFrame:
         df.loc[missing_weight & ((rounded_weight >= 0.5)  & (rounded_weight < 2.5)), 'weight_category'] = 'L5T'
         df.loc[df['weight_category'].isnull(), 'weight_category'] = 'OTH'
 
-        # Категории объема
         missing_volume = df['volume_category'].isnull()
         df.loc[missing_volume & (df['total_volume'] > 0) & (df['total_volume'] <= 120.0), 'volume_category'] = 'FTL'
         df.loc[df['volume_category'].isnull(), 'volume_category'] = 'OTH'

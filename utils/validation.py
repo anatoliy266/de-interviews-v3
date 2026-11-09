@@ -34,7 +34,7 @@ def validate_date_range(
 ) -> Tuple[date, date]:
     """Валидация диапазона дат с поддержкой дефолтного значения для начала."""
     start = validate_date(start_date, "start_date", default=default_start)
-    end = validate_date(end_date, "end_date") # Для end_date дефолт обычно не нужен
+    end = validate_date(end_date, "end_date")
 
     if start > end:
         raise ValueError(
