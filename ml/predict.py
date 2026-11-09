@@ -12,7 +12,7 @@ from catboost import CatBoostRegressor
 from utils.connection import create_db_engine
 from utils import defaults
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("orchestrator")
 
 CATEGORICAL_FEATURES = [
     "loading_city", "loading_region",
@@ -163,12 +163,6 @@ def run_batch_prediction(db_url: str, model_name: str, target_table: str, as_of_
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
     parser = argparse.ArgumentParser(description="Скрипт пакетного скоринга (Batch Prediction).")
     parser.add_argument("--connection", type=str, default=defaults.DB_URL, help="строка подключения к БД")
     parser.add_argument("--model_path", type=str, default=defaults.MODEL_PATH, help="Путь к файлу модели .cbm")

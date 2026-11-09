@@ -8,7 +8,7 @@ from sqlalchemy.engine import Engine
 from utils.connection import create_db_engine
 from utils import defaults
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("orchestrator")
 
 
 def refresh_materialized_view(engine: Engine, view_name: str, concurrently: bool = False) -> None:
@@ -42,11 +42,6 @@ def run_mart_etl(db_url: str, view_name: str, concurrently: bool = False):
             logger.info("Подключение к БД закрыто")
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
 
     parser = argparse.ArgumentParser(description="Скрипт Mart ETL: обновление материализованных представлений.")
     parser.add_argument("--connection", type=str, default=defaults.DB_URL, help="строка подключения к БД")

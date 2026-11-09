@@ -14,7 +14,7 @@ from utils.connection import create_db_engine
 from utils import defaults
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("orchestrator")
 
 
 def read_source_data(engine, start_date, end_date):

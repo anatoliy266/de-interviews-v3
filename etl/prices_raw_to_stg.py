@@ -14,7 +14,7 @@ from utils.validation import validate_date_range
 from utils.connection import create_db_engine
 from utils import defaults
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("orchestrator")
 
 
 def read_source_data(engine: Engine, start_date: date, end_date: date, provider: str, csv_path: Optional[str]) -> pd.DataFrame:
@@ -262,11 +262,6 @@ def run_core_etl(db_url: str, start_date, end_date, provider: str, csv_path: Opt
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
 
     parser = argparse.ArgumentParser(description="Скрипт Core ETL: Raw to STG.")
     parser.add_argument("--connection", type=str, default=defaults.DB_URL, help="строка подключения к БД")

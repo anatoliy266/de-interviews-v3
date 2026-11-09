@@ -21,7 +21,7 @@ from sklearn.metrics import (
 from utils.connection import create_db_engine
 from utils import defaults
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("orchestrator")
 
 TARGET = "price_rub"
 
@@ -213,11 +213,6 @@ def run_price_model_training(
 
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
     parser = argparse.ArgumentParser(
         description="Скрипт обучения CatBoost модели на признаках ml.price_features."
     )

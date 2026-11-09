@@ -1,7 +1,7 @@
 import sys
 import logging
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import dateutil.relativedelta
 
 # Прямые импорты всех шагов пайплайна
@@ -9,7 +9,7 @@ from etl.prices_raw_to_stg import run_core_etl
 from etl.prices_stg_to_mart import run_mart_etl
 from ml.features_stg_to_ml import run_price_features_etl
 from ml.train import run_price_model_training
-from ml.predict import run_batch_prediction
+from ml.predict_fixed import run_batch_prediction
 
 # Настройка логирования на весь оркестратор
 logging.basicConfig(
@@ -17,7 +17,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] orchestrator: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("orchestrator")
 
 def parse_orchestrator_args():
     parser = argparse.ArgumentParser(description="Монолитный CLI оркестратор полного пайплайна.")
@@ -40,15 +40,17 @@ def run_pipeline():
     effective_end_date = args.end_date if args.end_date else args.start_date
     
     as_of_dt = datetime.strptime(effective_end_date, "%Y-%m-%d")
+    
+
     feature_start_dt = as_of_dt - dateutil.relativedelta.relativedelta(months=3)
     feature_start_str = feature_start_dt.strftime("%Y-%m-%d")
+    split_dt = as_of_dt - timedelta(weeks=3)
+    split_date_str = split_dt.strftime("%Y-%m-%d")
 
-    logger.info(f"Старт пайплайна. Период батча: {args.start_date} — {effective_end_date}")
+    logger.info(f"Старт пайплайна. Период батча ETL: {args.start_date} — {effective_end_date}")
+    logger.info(f"ML Окна: Train [{feature_start_str} — {split_date_str}), Test [{split_date_str} — {effective_end_date}]")
 
     try:
-        # ---------------------------------------------------------------------
-        # ШАГ 1: Raw to STG ETL
-        # ---------------------------------------------------------------------
         logger.info(">>> [1/5] Запуск: Raw to STG ETL")
         run_core_etl(
             db_url=args.connection,
@@ -58,19 +60,13 @@ def run_pipeline():
             csv_path=args.csv_path
         )
 
-        # ---------------------------------------------------------------------
-        # ШАГ 2: STG to Mart ETL
-        # ---------------------------------------------------------------------
         logger.info(">>> [2/5] Запуск: STG to Mart ETL")
         run_mart_etl(
             db_url=args.connection,
-            view_name="stg.v_price_features_source",  # Подставьте ваше имя матпредставления/вью
+            view_name="stg.v_price_features_source", 
             concurrently=args.concurrently
         )
 
-        # ---------------------------------------------------------------------
-        # ШАГ 3: Feature Engineering
-        # ---------------------------------------------------------------------
         logger.info(">>> [3/5] Запуск: Feature Engineering")
         run_price_features_etl(
             db_url=args.connection,
@@ -78,19 +74,12 @@ def run_pipeline():
             end_date=effective_end_date
         )
 
-        # ---------------------------------------------------------------------
-        # ШАГ 4: Model Training
-        # ---------------------------------------------------------------------
         logger.info(">>> [4/5] Запуск: Model Training")
-        # Для примера бьем 3-месячное окно: первые 2.5 месяца на train, последние 2 недели на test
-        train_end_dt = as_of_dt - dateutil.relativedelta.relativedelta(days=14)
-        test_start_dt = train_end_dt + dateutil.relativedelta.relativedelta(days=1)
-        
         run_price_model_training(
             db_url=args.connection,
             train_start=feature_start_str,
-            train_end=train_end_dt.strftime("%Y-%m-%d"),
-            test_start=test_start_dt.strftime("%Y-%m-%d"),
+            train_end=split_date_str,
+            test_start=split_date_str,
             test_end=effective_end_date,
             output_model_path=args.model_path
         )

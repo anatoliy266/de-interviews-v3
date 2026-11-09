@@ -24,7 +24,7 @@ def run_etl_task(conn_id: str, view_name: str, concurrently: bool):
         db_url = conn.get_uri()
         if db_url.startswith("postgres://"):
             db_url = db_url.replace("postgres://", "postgresql://", 1)
-        etl_task.run_etl(db_url, view_name,  False)
+        etl_task.run_mart_etl(db_url, view_name,  False)
     except Exception as e:
         raise AirflowFailException(f"Ошибка получения строки подключения: {e}")
 

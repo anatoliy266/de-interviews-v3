@@ -116,7 +116,7 @@ WITH raw_price_bodies AS (
     SELECT
         p.id AS price_id,
         p.body_type AS final_body_type_id
-    FROM public.prices p
+    FROM stg.prices p
     WHERE NOT EXISTS (
         SELECT 1
         FROM public.price_body_types pbt
@@ -149,7 +149,7 @@ SELECT
     p.currency_code,
     p.nearest_rate_date,
     p.created_at
-FROM public.prices p
+FROM stg.prices p
 	INNER JOIN public.price_dates pd ON p.id = pd.price_id
 	INNER JOIN deduplicated_bodies bt ON p.id = bt.price_id
 WHERE
