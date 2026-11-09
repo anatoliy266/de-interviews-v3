@@ -95,18 +95,28 @@ services:
     container_name: de_pipeline_runner
     env_file:
       - ./.env
+    environment:
+      - PYTHONPATH=/app
     volumes:
       - ./etl:/app/etl  
       - ./ml:/app/ml         
       - ./utils:/app/utils
       - ./entry.py:/app/entry.py
       - ./models:/app/models
+    command: [
+      "env", "PYTHONPATH=/app",
+      "python", "entry.py",
+      "--connection", "postgresql+psycopg2://postgres:test@postgres:5432/deals_bigdata",
+      "--model-path", "/app/models/model.cbm",
+      "--table-name", "mart.ml_price_predictions",
+      "2020-10-26",
+      "2026-10-26"
+    ]
     networks:
       - cluster
     depends_on:
       postgres:
         condition: service_healthy
-    restart: unless-stopped
 
 volumes:
   de_postgres_data:

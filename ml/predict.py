@@ -1,7 +1,7 @@
 import sys
 import logging
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -53,14 +53,20 @@ def run_batch_prediction(db_url: str, model_name: str, target_table: str, as_of_
         model.load_model(str(model_path))
         logger.info("Модель загружена: %s", model_path)
 
+        as_of_dt = datetime.strptime(as_of_date, "%Y-%m-%d")
+        predict_start_dt = as_of_dt - timedelta(days=14)
+        predict_start_str = predict_start_dt.strftime("%Y-%m-%d")
+
         engine = create_db_engine(db_url)
         query = text("""
             SELECT 
                 id,
                 price_id,
                 loading_date,
-                loading_city as loading_city_gcid,
-                unloading_city as unloading_city_gcid,
+                loading_city_gcid, -- тянем оригинальный gcid для витрины
+                loading_city,      -- тянем текст для CatBoost
+                unloading_city_gcid, -- тянем оригинальный gcid для витрины
+                unloading_city,      -- тянем текст для CatBoost
                 body_group,
                 price_rub as actual_price_rub,
                 distance, total_weight, total_volume,
@@ -73,12 +79,13 @@ def run_batch_prediction(db_url: str, model_name: str, target_table: str, as_of_
                 loading_region, unloading_region,
                 weight_category, volume_category
             FROM ml.price_features
-            WHERE loading_date >= :as_of_date
+            WHERE loading_date >= :predict_start_date
+                AND loading_date <= :predict_end_date
             ORDER BY loading_date
         """)
         
         with engine.connect() as conn:
-            df = pd.read_sql(query, conn, params={"as_of_date": as_of_date})
+            df = pd.read_sql(query, conn, params={"predict_start_date": predict_start_str, "predict_end_date": as_of_date})
             
         if df.empty:
             logger.warning(f"Нет данных для скоринга от {as_of_date}")
@@ -89,7 +96,7 @@ def run_batch_prediction(db_url: str, model_name: str, target_table: str, as_of_
         X_predict = prepare_model_data(df)
         df["predicted_price_rub"] = model.predict(X_predict)
 
-        ts_test_end = pd.Timestamp(as_of_date)
+        ts_test_end = datetime.strptime(as_of_date, "%Y-%m-%d").date()
         future_mask = df["loading_date"] > ts_test_end
         
         df["actual_price_rub_final"] = np.where(future_mask, np.nan, df["actual_price_rub"])
@@ -119,9 +126,32 @@ def run_batch_prediction(db_url: str, model_name: str, target_table: str, as_of_
         result_df.rename(columns={"actual_price_rub_final": "actual_price_rub"}, inplace=True)
 
         logger.info(f"Сохранение результатов в таблицу {target_table}...")
-        with engine.connect() as conn:
-            result_df.to_sql(target_table, conn, if_exists="append", index=False, method="multi")
+
+        parts = target_table.split('.')
+        schema_name = parts[0] if len(parts) > 1 else "public"
+        table_raw_name = parts[-1]
+
             
+        with engine.begin() as conn:
+            conn.execute(
+                text(f"""
+                    DELETE FROM {target_table} 
+                    WHERE loading_date >= :predict_start_date 
+                      AND loading_date <= :predict_end_date
+                """),
+                {
+                    "predict_start_date": predict_start_str, # Наша дата сдвига (минус 14 дней)
+                    "predict_end_date": as_of_date           # Конечная дата батча
+                }
+            )
+            result_df.to_sql(
+                name=table_raw_name,
+                schema=schema_name,
+                con=conn,
+                if_exists="append",
+                index=False,
+                method="multi"
+            )
         logger.info(f"Batch prediction успешно завершен. Сохранено строк: {len(result_df)}")
 
     except Exception as e:
@@ -141,8 +171,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Скрипт пакетного скоринга (Batch Prediction).")
     parser.add_argument("--connection", type=str, default=defaults.DB_URL, help="строка подключения к БД")
-    parser.add_argument("--model-path", type=str, default=defaults.MODEL_PATH, help="Путь к файлу модели .cbm")
-    parser.add_argument("--table-name", type=str, default=defaults.TARGET_TABLE, help="имя результирующей таблицы")
+    parser.add_argument("--model_path", type=str, default=defaults.MODEL_PATH, help="Путь к файлу модели .cbm")
+    parser.add_argument("--table_name", type=str, default=defaults.TARGET_TABLE, help="имя результирующей таблицы")
     parser.add_argument("as_of_date", type=str, nargs="?", default=defaults.AS_OF_DATE, help="Дата начала скоринга (ГГГГ-ММ-ДД)")
 
     args = parser.parse_args()

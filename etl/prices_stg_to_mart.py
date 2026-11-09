@@ -23,7 +23,7 @@ def refresh_materialized_view(engine: Engine, view_name: str, concurrently: bool
         
     logger.info("Материализованное представление %s успешно обновлено", view_name)
 
-def run_etl(db_url: str, view_name: str, concurrently: bool = False):
+def run_mart_etl(db_url: str, view_name: str, concurrently: bool = False):
     engine = None
     try:
         engine = create_db_engine(db_url)
@@ -58,7 +58,7 @@ if __name__ == "__main__":
     logger.info("Запуск Mart ETL для вьюхи: %s", args.view_name)
     
     try:
-        run_etl(
+        run_mart_etl(
             db_url=args.connection,
             view_name=args.view_name,
             concurrently=args.concurrently
