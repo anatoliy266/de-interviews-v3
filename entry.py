@@ -9,7 +9,7 @@ from etl.prices_raw_to_stg import run_core_etl
 from etl.prices_stg_to_mart import run_mart_etl
 from ml.features_stg_to_ml import run_price_features_etl
 from ml.train import run_price_model_training
-from ml.predict_fixed import run_batch_prediction
+from ml.predict import run_batch_prediction
 
 # Настройка логирования на весь оркестратор
 logging.basicConfig(
