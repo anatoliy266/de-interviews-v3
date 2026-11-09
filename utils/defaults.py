@@ -1,0 +1,5 @@
+MODEL_PATH = "models/price_regression_v1.cbm"
+DB_URL = "postgresql://postgres:test@localhost:5433/deals_bigdata"
+TARGET_TABLE = "mart.ml_price_predictions"
+MODEL_NAME = "catboost_price_v1"
+AS_OF_DATE = "2026-10-26"
