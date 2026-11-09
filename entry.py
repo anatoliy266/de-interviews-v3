@@ -4,14 +4,12 @@ import argparse
 from datetime import datetime, timedelta
 import dateutil.relativedelta
 
-# Прямые импорты всех шагов пайплайна
 from etl.prices_raw_to_stg import run_core_etl
 from etl.prices_stg_to_mart import run_mart_etl
 from ml.features_stg_to_ml import run_price_features_etl
 from ml.train import run_price_model_training
 from ml.predict import run_batch_prediction
 
-# Настройка логирования на весь оркестратор
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] orchestrator: %(message)s",
@@ -34,8 +32,6 @@ def parse_orchestrator_args():
 
 def run_pipeline():
     args = parse_orchestrator_args()
-
-    logger.info(f"=== НАПАРСЕННЫЕ АРГУМЕНТЫ: {vars(args)} ===")
 
     effective_end_date = args.end_date if args.end_date else args.start_date
     
@@ -84,9 +80,6 @@ def run_pipeline():
             output_model_path=args.model_path
         )
 
-        # ---------------------------------------------------------------------
-        # ШАГ 5: Batch Prediction
-        # ---------------------------------------------------------------------
         logger.info(">>> [5/5] Запуск: Batch Prediction")
         logger.info(f"args.table_name: {args.table_name}")
         run_batch_prediction(
