@@ -14,7 +14,7 @@ x-configs: &airflow-base
     - ./ml:/opt/airflow/ml         
     - ./utils:/opt/airflow/utils
   networks:
-    - cluster
+    - de-cluster
 services:
   postgres:
     image: postgres:17
@@ -37,7 +37,7 @@ services:
       start_period: 180s
     restart: unless-stopped
     networks:
-      - cluster
+      - de-cluster
 
   airflow-init:
     container_name: de_airflow-init
@@ -103,6 +103,11 @@ services:
       - ./utils:/app/utils
       - ./entry.py:/app/entry.py
       - ./models:/app/models
+      # для запуска тестов в контейнере раннера: docker compose run --rm runner pytest
+      - ./dags:/app/dags
+      - ./sql:/app/sql:ro
+      - ./tests:/app/tests
+      - ./pytest.ini:/app/pytest.ini:ro
     command: [
       "env", "PYTHONPATH=/app",
       "python", "entry.py",
@@ -113,7 +118,7 @@ services:
       "2026-10-26"
     ]
     networks:
-      - cluster
+      - de-cluster
     depends_on:
       postgres:
         condition: service_healthy
@@ -122,5 +127,5 @@ volumes:
   de_postgres_data:
 
 networks:
-  cluster:
-    external: true
+  de-cluster:
+    driver: bridge
